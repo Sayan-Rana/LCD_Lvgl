@@ -40,6 +40,9 @@ static uint8_t is_lcd_write_allowed(bsp_lcd_t *lcd);
 void initialize_lcd_write_dma(uint32_t src_addr, uint32_t dst_addr);
 void initialize_memory_write_dma(uint32_t src_addr, uint32_t dst_addr);
 uint16_t convert_rgb888_to_rgb565(uint32_t rgb888);
+static void dma_lcd_write_error(bsp_lcd_t *lcd);
+static void dma_cmplt_callback_spi_write(bsp_lcd_t *lcd);
+
 
 void DMA_TransferComplete(bsp_lcd_t *hlcd);
 void DMA_TransferError(bsp_lcd_t *hlcd);
@@ -173,11 +176,16 @@ void bsp_lcd_fill_rect(uint32_t rgb888, uint32_t x_start, uint32_t x_width,uint3
 }
 
 void bsp_lcd_write_dma(uint32_t src_addr, uint32_t nbytes) {
-	/* Will implement later */
+	lcd_write_dma(src_addr, nbytes);
 }
 
 void bsp_lcd_set_display_area(uint16_t x1, uint16_t x2, uint16_t y1 , uint16_t y2) {
-
+	lcd_area_t area;
+	area.x1 = x1;
+	area.x2 = x2;
+	area.y1 = y1;
+	area.y2 = y2;
+	lcd_set_display_area(&area);
 }
 
 void bsp_lcd_send_cmd_mem_write(void) {
@@ -185,7 +193,7 @@ void bsp_lcd_send_cmd_mem_write(void) {
 }
 
 uint16_t bsp_lcd_convert_rgb888_to_rgb565(uint32_t rgb888) {
-
+	convert_rgb888_to_rgb565(rgb888);
 }
 
 void *bsp_lcd_get_draw_buffer1_addr(void) {
@@ -363,8 +371,9 @@ void lcd_config(void) {
 	lcd_write_data(params, 15);
 
 	lcd_write_cmd(ILI9341_SLEEP_OUT); //Exit Sleep
-	delay_50ms();
-	delay_50ms();
+	sleep_ms(100);
+	// delay_50ms();
+	// delay_50ms();
 	lcd_write_cmd(ILI9341_DISPLAY_ON); //display on
 }
 
@@ -446,11 +455,11 @@ void lcd_write_dma(uint32_t src_addr, uint32_t nbytes) {
 }
 
 void dma_copy_m2p(uint32_t src_addr, uint32_t dst_addr ,  uint32_t nitems) {
-
+	// Impliment yourself
 }
 
 void dma_copy_m2m(uint32_t src_addr, uint32_t dst_addr ,  uint32_t nitems) {
-
+	// Impliment yourself
 }
 
 uint32_t get_total_bytes(bsp_lcd_t *lcd,uint32_t w , uint32_t h) {
@@ -534,7 +543,7 @@ uint32_t pixels_to_bytes(uint32_t pixels, uint8_t pixel_format) {
 	return pixels * 2UL;
 }
 
-static uint8_t is_lcd_write_allowed(bsp_lcd_t *lcd) {
+uint8_t is_lcd_write_allowed(bsp_lcd_t *lcd) {
 	__disable_irq();
 	if(!hlcd->buff_to_flush) {
 		__enable_irq();
@@ -545,7 +554,7 @@ static uint8_t is_lcd_write_allowed(bsp_lcd_t *lcd) {
 }
 
 void initialize_lcd_write_dma(uint32_t src_addr, uint32_t dst_addr) {
-
+	// Implement yourself
 }
 
 void initialize_memory_write_dma(uint32_t src_addr, uint32_t dst_addr) {
@@ -560,10 +569,30 @@ uint16_t convert_rgb888_to_rgb565(uint32_t rgb888) {
 	return (uint16_t)((r << 11) | (g << 5) | b);
 }
 
-void DMA_TransferComplete(bsp_lcd_t *hlcd) {
-
+void dma_lcd_write_error(bsp_lcd_t *lcd) {
+	DMA_TransferError(lcd);
+	while(1);
 }
 
-void DMA_TransferError(bsp_lcd_t *hlcd) {
+void dma_cmplt_callback_spi_write(bsp_lcd_t *lcd) {
+	lcd->buff_to_flush = NULL;
+#if (USE_DMA == 1)
+	 LCD_CSX_HIGH();
+	__disable_spi();
+	__spi_set_dff_8bit();
+	__enable_spi();
+#endif
+	DMA_TransferComplete(lcd);
+}
 
+__attribute__ ((weak)) void DMA_TransferComplete(bsp_lcd_t *hlcd) {
+	UNUSED(hlcd);
+}
+
+__attribute__ ((weak)) void DMA_TransferError(bsp_lcd_t *hlcd) {
+	UNUSED(hlcd);
+}
+
+void dma_lcd_write_irq_handler(void) {
+	// Impliment yourself
 }

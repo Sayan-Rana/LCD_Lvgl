@@ -9,7 +9,7 @@ extern "C" {
 #include <stdio.h>
 #include "pico/stdlib.h"
 #include "lvgl.h"
-#include "../bsp/lcd/bsp_lcd.h"
+#include "lcd/bsp_lcd.h"
 
 #define auto 1
 #define manual 0
